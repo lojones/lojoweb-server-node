@@ -21,6 +21,7 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     logger.debug("entered /api/auth/signin route");
     logger.debug("req.body: ", req.body);
     const { username, password } = req.body;
+    logger.debug("username, password: ", username, password);
     const user = findUserByUsername(username);  
     logger.debug("user: ", user);
     if (user && user.password === password) {
