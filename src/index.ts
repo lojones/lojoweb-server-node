@@ -1,6 +1,7 @@
 const logger = require('./logger'); 
 require('dotenv').config();
 const envvars = require('./envvars');
+const authUtils = require('./authutils');
 
 const jwt = require('jsonwebtoken');
 import express, { Request, Response } from 'express';
@@ -28,9 +29,9 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     logger.debug("user: ", user);
     if (user && user.password === password) {
         logger.debug("user and password match");
-        const payload = { id: user.id };
-        const token = jwt.sign(payload, jwt_secret, { expiresIn: '1h' });
-        const userData = { username: user.id };
+        const payload = authUtils.getJwtPayload(username, 60);
+        const token = jwt.sign(payload, jwt_secret);
+        const userData = { username: user.username, firstname: user.firstname, lastname: user.lastname };
         res.send({ token: token, user: userData });
     } else {
         logger.debug("user and password do not match");
