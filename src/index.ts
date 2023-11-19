@@ -58,6 +58,14 @@ app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
     res.send('healthy');
 });
 
+app.get('/api/user/details', authenticateToken, (req: Request, res: Response) => {
+    logger.debug("entered /api/user/details route");
+    const username = String(req.query.username);
+    const user = localAccountsJson[username];
+    const returnUser = { username: user.username, firstname: user.firstname, lastname: user.lastname };
+    res.send(returnUser);
+})
+
 app.listen(PORT, () => {
     logger.info("server running on port ", PORT);
 });
