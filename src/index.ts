@@ -1,5 +1,5 @@
 const logger = require('./logger'); 
-
+const envvars = require('./envvars');
 
 const jwt = require('jsonwebtoken');
 import express, { Request, Response } from 'express';
@@ -8,7 +8,8 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const jwt_secret = 'secret';
+const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
+const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
 
 app.use(cors());
 app.use(express.json());
@@ -22,7 +23,7 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     logger.debug("req.body: ", req.body);
     const { username, password } = req.body;
     logger.debug("username, password: ", username, password);
-    const user = findUserByUsername(username);  
+    const user = localAccountsJson[username];
     logger.debug("user: ", user);
     if (user && user.password === password) {
         logger.debug("user and password match");
@@ -37,14 +38,7 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     
 });
 
-function findUserByUsername(username: string) {
-    logger.debug("entered findUserByUsername");
-    logger.debug("username: ", username);
-    return {
-        id: username,
-        password: 'test'
-    }
-}
+
 
 function authenticateToken(req: Request, res: Response, next: any) {
     const authHeader = req.headers['authorization'];
