@@ -2,16 +2,15 @@ const logger = require('./logger');
 require('dotenv').config();
 const envvars = require('./envvars');
 const authUtils = require('./authutils');
-
 const jwt = require('jsonwebtoken');
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-
 const app = express();
 const PORT = process.env.PORT || 5000;
-
 const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
 const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
+import { LojoChat } from './models/LojoChat';
+
 
 app.use(cors());
 app.use(express.json());
@@ -52,6 +51,19 @@ function authenticateToken(req: Request, res: Response, next: any) {
         next();
     });
 }
+
+app.post('/api/chat/remark', authenticateToken, async (req: Request, res: Response) => {
+    logger.debug("entered /api/chat/send route");
+    const chat : LojoChat = req.body as LojoChat;
+    const latestRemark = chat.remarks[chat.remarks.length - 1];
+    const latestRemarkText =latestRemark.remark;
+    const messageText = `Received message '${latestRemarkText}' and sending ack`;
+    const responseJson = { message: messageText };
+    // Sleep for 5 seconds
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    res.send(responseJson);
+});
 
 app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
     logger.debug("entered /api/health route");
