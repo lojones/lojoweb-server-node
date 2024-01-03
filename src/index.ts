@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 const logger = require('./logger'); 
 require('dotenv').config();
 const envvars = require('./envvars');
@@ -11,6 +12,9 @@ const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
 const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
 import { LojoChat } from './models/LojoChat';
 
+const openai = new OpenAI({
+    apiKey: process.env['OPENAI_API_KEY'], // This is the default and can be omitted
+  });
 
 app.use(cors());
 app.use(express.json());
@@ -59,6 +63,17 @@ app.post('/api/chat/remark', authenticateToken, async (req: Request, res: Respon
     const latestRemarkText =latestRemark.remark;
     const messageText = `Received message '${latestRemarkText}' and sending ack`;
     const responseJson = { message: messageText };
+    const stream = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ 
+                    role: 'user',
+                    content: latestRemarkText
+                    }],
+        stream: true,
+        });
+    for await (const chunk of stream) {
+        process.stdout.write(chunk.choices[0]?.delta?.content || '');
+    }
     // Sleep for 5 seconds
     await new Promise(resolve => setTimeout(resolve, 5000));
 
