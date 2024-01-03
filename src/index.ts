@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 const logger = require('./logger'); 
 require('dotenv').config();
 const envvars = require('./envvars');
-const authUtils = require('./authutils');
+// const authUtils = require('./authutils');
 const jwt = require('jsonwebtoken');
 import express, { Request, Response } from 'express';
 import cors from 'cors';
@@ -11,6 +11,9 @@ const PORT = process.env.PORT || 5000;
 const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
 const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
 import { LojoChat } from './models/LojoChat';
+import { getJwtPayload, authenticateToken, authenticateUsernamePassword } from './auth/auth';
+import { AuthcResponse } from './models/UserAuthenticationResponse';
+
 
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], // This is the default and can be omitted
@@ -25,38 +28,16 @@ app.get('/', (req: Request, res: Response) => {
 
 app.post('/api/auth/signin', (req: Request, res: Response) => {
     logger.debug("entered /api/auth/signin route");
-    logger.debug("req.body: ", req.body);
-    const { username, password } = req.body;
-    logger.debug("username, password: ", username, password);
-    const user = localAccountsJson[username];
-    logger.debug("user: ", user);
-    if (user && user.password === password) {
-        logger.debug("user and password match");
-        const payload = authUtils.getJwtPayload(username, 60);
-        const token = jwt.sign(payload, jwt_secret);
-        const userData = { username: user.username, firstname: user.firstname, lastname: user.lastname };
-        res.send({ token: token, user: userData });
+    const authResponse:AuthcResponse = authenticateUsernamePassword(req);
+    if (authResponse.status === 'success') {
+        res.send(authResponse);
     } else {
-        logger.debug("user and password do not match");
         res.status(401).send({ message: 'Invalid login' });
     }
     
 });
 
-
-
-function authenticateToken(req: Request, res: Response, next: any) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    logger.debug("token: ", token);
-    if (token == null) return res.sendStatus(401);
-    jwt.verify(token, jwt_secret, (err:any, user:any) => {
-        if (err) return res.sendStatus(403);
-        next();
-    });
-}
-
-app.post('/api/chat/remark', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/chat/remark', authenticateToken, async (req: Request, res: Response) => {
     logger.debug("entered /api/chat/send route");
     const chat : LojoChat = req.body as LojoChat;
     const latestRemark = chat.remarks[chat.remarks.length - 1];
@@ -72,12 +53,13 @@ app.post('/api/chat/remark', authenticateToken, async (req: Request, res: Respon
         stream: true,
         });
     for await (const chunk of stream) {
-        process.stdout.write(chunk.choices[0]?.delta?.content || '');
+        const data = chunk.choices[0]?.delta?.content || '';
+        res.write(`message: ${JSON.stringify(data)}\n\n`);
     }
     // Sleep for 5 seconds
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // await new Promise(resolve => setTimeout(resolve, 5000));
 
-    res.send(responseJson);
+    res.end();
 });
 
 app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
