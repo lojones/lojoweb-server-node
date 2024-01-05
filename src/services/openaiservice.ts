@@ -1,14 +1,19 @@
 import OpenAI from 'openai';
+import { ChatCompletionMessage } from 'openai/resources/chat';
+import { PROMPT_CONFIG } from '../config/config.app';   
+
+
 import { v4 as uuidv4 } from 'uuid';
 import { LojoChat, LojoChatRemarkUniqueId } from '../models/LojoChat';
 const logger = require('../util/logger'); 
 import { Request, Response } from 'express';
 
+// import { Chat } from 'openai/resources/chat/chat'
+// import ChatCompletionMessageParam = 
+
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], 
 });
-
-// const openaiChats
 
 export const getResponseAsStream = async (message: string) : Promise<string> => {
     const stream = await openai.chat.completions.create({
@@ -47,6 +52,31 @@ export const submitRemark = (chat : LojoChat) : LojoChatRemarkUniqueId=> {
     
 }
 
+const generateLlmPrompt = (chat : LojoChat) : ChatCompletionMessage[] => {
+    
+    const prompts : ChatCompletionMessage[] = [];
+
+    const systemPrompt : ChatCompletionMessage = {
+        role: 'system',
+        content: PROMPT_CONFIG.system_prompt
+    }
+
+    prompts.push(systemPrompt);
+
+    const remarks = chat.remarks;
+    remarks.forEach(remark => {
+        const message = remark.remark;
+        const role = remark.isAiResponse ? 'assistant' : 'user';
+        const messagePart : ChatCompletionMessage = {
+            role: role,
+            content: message
+        }
+        prompts.push(messagePart);
+    });
+
+    return prompts;
+}
+
 export const getRemarkResponseStream = async (remarkUniqueId : string, res : Response)  => {
     logger.debug("entered getRemarkResponseStream");
     const chat = openaiChatsMap.get(remarkUniqueId);
@@ -56,14 +86,10 @@ export const getRemarkResponseStream = async (remarkUniqueId : string, res : Res
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
           });
-        const latestRemark = chat.remarks[chat.remarks.length - 1];
-        const latestRemarkText =latestRemark.remark;
+        const prompts = generateLlmPrompt(chat);
         const stream = await openai.chat.completions.create({
             model: 'gpt-4',
-            messages: [{ 
-                        role: 'user',
-                        content: latestRemarkText
-                        }],
+            messages: prompts,
             stream: true,
         });
         for await (const chunk of stream) {
