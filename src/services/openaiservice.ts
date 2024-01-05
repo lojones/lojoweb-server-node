@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { ChatCompletionMessage } from 'openai/resources/chat';
-import { PROMPT_CONFIG } from '../config/config.app';   
+import { PROMPT_CONFIG, OPENAI_CONFIG } from '../config/config.app';   
 
 
 import { v4 as uuidv4 } from 'uuid';
@@ -88,7 +88,7 @@ export const getRemarkResponseStream = async (remarkUniqueId : string, res : Res
           });
         const prompts = generateLlmPrompt(chat);
         const stream = await openai.chat.completions.create({
-            model: 'gpt-4',
+            model: OPENAI_CONFIG.model,
             messages: prompts,
             stream: true,
         });
