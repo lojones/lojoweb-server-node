@@ -1,9 +1,9 @@
 import express, { Request, Response } from 'express';
 import { AuthcResponse } from '../models/UserAuthenticationResponse';
-import { UserData } from '../models/UserData';
+import { UserSummary } from '../models/User';
 
 const jwt = require('jsonwebtoken');
-const logger = require('../logger'); 
+const logger = require('../util/logger'); 
 const envvars = require('../envvars');
 const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
 
@@ -45,7 +45,7 @@ const getAuthcResponseObject = (
         lastname?: string
     } ) => {
 
-    const user: UserData = { 
+    const user: UserSummary = { 
         username: getSafeValue(username), 
         firstname: getSafeValue(firstname), 
         lastname: getSafeValue(lastname) 

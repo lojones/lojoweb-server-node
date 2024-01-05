@@ -19,3 +19,7 @@ export interface LojoChatMetadata {
     summary: string;
     timestamp: Date;
 }
+
+export interface LojoChatRemarkUniqueId {
+    remarkUid: string;
+}

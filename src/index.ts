@@ -1,22 +1,21 @@
 import OpenAI from 'openai';
-const logger = require('./logger'); 
+const logger = require('./util/logger'); 
 require('dotenv').config();
 const envvars = require('./envvars');
-// const authUtils = require('./authutils');
-const jwt = require('jsonwebtoken');
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 5000;
-const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
-const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
 import { LojoChat } from './models/LojoChat';
-import { getJwtPayload, authenticateToken, authenticateUsernamePassword } from './auth/auth';
+import { authenticateToken, authenticateUsernamePassword } from './auth/auth';
 import { AuthcResponse } from './models/UserAuthenticationResponse';
+import { UserDetail } from './models/User';
+import { getUserDetails } from './user/user';
+import { submitRemark, getRemarkResponseStream } from './services/openaiservice';
 
 
 const openai = new OpenAI({
-    apiKey: process.env['OPENAI_API_KEY'], // This is the default and can be omitted
+    apiKey: process.env['OPENAI_API_KEY'], 
   });
 
 app.use(cors());
@@ -37,29 +36,18 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     
 });
 
-app.get('/api/chat/remark', authenticateToken, async (req: Request, res: Response) => {
+app.post('/api/chat/remark/submit', authenticateToken, async (req: Request, res: Response) => {
     logger.debug("entered /api/chat/send route");
     const chat : LojoChat = req.body as LojoChat;
-    const latestRemark = chat.remarks[chat.remarks.length - 1];
-    const latestRemarkText =latestRemark.remark;
-    const messageText = `Received message '${latestRemarkText}' and sending ack`;
-    const responseJson = { message: messageText };
-    const stream = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [{ 
-                    role: 'user',
-                    content: latestRemarkText
-                    }],
-        stream: true,
-        });
-    for await (const chunk of stream) {
-        const data = chunk.choices[0]?.delta?.content || '';
-        res.write(`message: ${JSON.stringify(data)}\n\n`);
-    }
-    // Sleep for 5 seconds
-    // await new Promise(resolve => setTimeout(resolve, 5000));
+    const remarkUniqueId = submitRemark(chat);
+    res.send(remarkUniqueId);
+});
 
-    res.end();
+app.get('/api/chat/remark/responsestream/:remarkUniqueId', (req: Request, res: Response) => {
+    logger.debug("entered /api/chat/remark/responsestream/:remarkUniqueId route");
+    const remarkUniqueId = String(req.params.remarkUniqueId);
+    getRemarkResponseStream(remarkUniqueId, res);
+    logger.debug("exiting /api/chat/remark/responsestream/:remarkUniqueId route");
 });
 
 app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
@@ -70,9 +58,8 @@ app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
 app.get('/api/user/details', authenticateToken, (req: Request, res: Response) => {
     logger.debug("entered /api/user/details route");
     const username = String(req.query.username);
-    const user = localAccountsJson[username];
-    const returnUser = { username: user.username, firstname: user.firstname, lastname: user.lastname };
-    res.send(returnUser);
+    const userDetail: UserDetail = getUserDetails(username);
+    res.send(userDetail);
 })
 
 app.listen(PORT, () => {
