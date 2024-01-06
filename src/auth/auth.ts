@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { AuthcResponse } from '../models/UserAuthenticationResponse';
 import { UserSummary } from '../models/User';
+import { getSafeValue } from '../util/util';
 
 const jwt = require('jsonwebtoken');
 const logger = require('../util/logger'); 
@@ -27,10 +28,6 @@ export const getJwtPayload = (subject: string, expiryMinutes: number): Record<st
         iat: now.getTime() / 1000,
         exp: expiry.getTime() / 1000,
     }
-}
-
-const getSafeValue = (value: string | undefined) => {
-    return value ? value : '';
 }
 
 const getAuthcResponseObject = (
@@ -64,7 +61,7 @@ export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
     logger.debug("username, password: ", username, password);
     const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
     const user = localAccountsJson[username];
-    logger.debug("user: ", user);
+    logger.debug("user: " + getSafeValue(user));
     if (user && user.password === password) {
         logger.debug("user and password match");
         const payload = getJwtPayload(username, 60);
@@ -78,7 +75,10 @@ export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
             lastname: user.lastname});
         return resp;
     } else {
-        logger.debug("user and password do not match");
+        logger.debug("user and password do not match or user unknown: user " + getSafeValue(username) + ", provided pw: " + getSafeValue(password));
+        if (user) {
+            logger.debug("user known, but pw does not match: expected " + getSafeValue(user.password) + " vs. " + getSafeValue(password));
+        }
         const resp: AuthcResponse = getAuthcResponseObject({
             status: 'error',
             message: 'Invalid sign in',
