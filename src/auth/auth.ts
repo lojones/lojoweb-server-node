@@ -20,6 +20,14 @@ export const authenticateToken = (req: Request, res: Response, next: any) => {
     });
 }
 
+export const getUsernameFromToken = (req: Request) : string => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const decodedToken = jwt.decode(token);
+    const username = decodedToken.sub;
+    return username;
+}
+
 export const getJwtPayload = (subject: string, expiryMinutes: number): Record<string, unknown> => {
     const now = new Date()
     const expiry = new Date(now.getTime() + expiryMinutes * 60000)

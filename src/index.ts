@@ -57,8 +57,7 @@ app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
 
 app.get('/api/user/details', authenticateToken, (req: Request, res: Response) => {
     logger.debug("entered /api/user/details route");
-    const username = String(req.query.username);
-    const userDetail: UserDetail = getUserDetails(username);
+    const userDetail: UserDetail = getUserDetails(req);
     res.send(userDetail);
 })
 
