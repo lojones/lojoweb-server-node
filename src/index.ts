@@ -7,7 +7,7 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 5000;
 import { LojoChat } from './models/LojoChat';
-import { authenticateToken, authenticateUsernamePassword } from './auth/auth';
+import { authenticateToken, authenticateUsernamePassword, authenticateGoogleToken } from './auth/auth';
 import { AuthcResponse } from './models/UserAuthenticationResponse';
 import { UserDetail } from './models/User';
 import { getUserDetails } from './user/user';
@@ -33,7 +33,20 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     } else {
         res.status(401).send({ message: 'Invalid login' });
     }
-    
+});
+
+app.post('/api/auth/google/token/signin', async (req: Request, res: Response) => {
+    logger.debug("entered /api/auth/google/token/signin route");
+    try {
+        const authResponse: AuthcResponse = await authenticateGoogleToken(req);
+        if (authResponse.status === 'success') {
+            res.send(authResponse);
+        } else {
+            res.status(401).send({ message: 'Invalid login' });
+        }
+    } catch (error) {
+        res.status(500).send({ message: 'Internal server error' });
+    }
 });
 
 app.post('/api/chat/remark/submit', authenticateToken, async (req: Request, res: Response) => {

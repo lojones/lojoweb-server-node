@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { AuthcResponse } from '../models/UserAuthenticationResponse';
 import { UserSummary } from '../models/User';
 import { getSafeValue } from '../util/util';
+import { OAuth2Client } from 'google-auth-library';
 
 const jwt = require('jsonwebtoken');
 const logger = require('../util/logger'); 
@@ -64,6 +65,12 @@ const getAuthcResponseObject = (
     return response;
 }
 
+export const getSignedJwtToken = (username: string) : string => {
+    const payload = getJwtPayload(username, 60);
+    const token = jwt.sign(payload, jwt_secret);
+    return token;
+}
+
 export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
     const { username, password } = req.body;
     logger.debug("username, password: ", username, password);
@@ -72,8 +79,7 @@ export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
     logger.debug("user: " + getSafeValue(user));
     if (user && user.password === password) {
         logger.debug("user and password match");
-        const payload = getJwtPayload(username, 60);
-        const token = jwt.sign(payload, jwt_secret);
+        const token = getSignedJwtToken(username);
         const resp: AuthcResponse = getAuthcResponseObject({
             status: 'success',
             message: 'success',
@@ -94,3 +100,37 @@ export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
         return resp;
     }
 }
+
+export const authenticateGoogleToken = async (req: Request): Promise<AuthcResponse> => {
+    const { token } = req.body;
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    if (payload) {
+        const userid = payload['email'];
+        if (userid) {
+            const signedJwtToken = getSignedJwtToken(userid);
+            const resp: AuthcResponse = getAuthcResponseObject({
+                status: 'success',
+                message: 'success',
+                token: signedJwtToken,
+                username: userid,
+                firstname: payload['given_name'],
+                lastname: payload['family_name'],
+            });
+            return resp;
+        } else {
+            logger.debug("userid not found in payload");
+            // raise an error
+            throw new Error("userid not found in payload");
+        }
+    }
+    
+    // Add a return statement here to fix the issue
+    throw new Error("Payload is empty");
+};
