@@ -5,8 +5,11 @@ export interface UserSummary {
 }
 
 export interface UserDetail {
+  id: string;
   username: string;
   firstname: string;
   lastname: string;
+  email: string;
+  profilepicurl: string;
 }
 

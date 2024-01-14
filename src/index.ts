@@ -10,7 +10,7 @@ import { LojoChat } from './models/LojoChat';
 import { authenticateToken, authenticateUsernamePassword, authenticateGoogleToken } from './auth/auth';
 import { AuthcResponse } from './models/UserAuthenticationResponse';
 import { UserDetail } from './models/User';
-import { getUserDetails } from './user/user';
+import { getUserDetails, saveUserDetails } from './user/user';
 import { submitRemark, getRemarkResponseStream } from './services/openaiservice';
 
 
@@ -28,6 +28,7 @@ app.get('/', (req: Request, res: Response) => {
 app.post('/api/auth/signin', (req: Request, res: Response) => {
     logger.debug("entered /api/auth/signin route");
     const authResponse:AuthcResponse = authenticateUsernamePassword(req);
+    saveUserDetails(authResponse.user);
     if (authResponse.status === 'success') {
         res.send(authResponse);
     } else {
@@ -39,6 +40,7 @@ app.post('/api/auth/google/token/signin', async (req: Request, res: Response) =>
     logger.debug("entered /api/auth/google/token/signin route");
     try {
         const authResponse: AuthcResponse = await authenticateGoogleToken(req);
+        saveUserDetails(authResponse.user);
         if (authResponse.status === 'success') {
             res.send(authResponse);
         } else {
@@ -70,8 +72,13 @@ app.get('/api/health', authenticateToken, (req: Request, res: Response) => {
 
 app.get('/api/user/details', authenticateToken, (req: Request, res: Response) => {
     logger.debug("entered /api/user/details route");
-    const userDetail: UserDetail = getUserDetails(req);
-    res.send(userDetail);
+    getUserDetails(req)
+    .then((userDetail: UserDetail) => {
+        res.send(userDetail);
+    })
+    .catch((error) => {
+        res.status(500).send({ message: 'Internal server error: '+error });
+    });
 })
 
 app.listen(PORT, () => {

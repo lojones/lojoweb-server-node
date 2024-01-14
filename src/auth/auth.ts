@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { AuthcResponse } from '../models/UserAuthenticationResponse';
-import { UserSummary } from '../models/User';
+import { UserDetail, UserSummary } from '../models/User';
 import { getSafeValue } from '../util/util';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -41,20 +41,24 @@ export const getJwtPayload = (subject: string, expiryMinutes: number): Record<st
 
 const getAuthcResponseObject = (
     {
-        status,message,token,username,firstname,lastname
+        status,message,token,username,firstname,lastname,email,profilepicurl
     } : {
         status: string,
         message: string, 
         token?: string, 
         username?: string,
         firstname?: string,
-        lastname?: string
+        lastname?: string,
+        email?: string,
+        profilepicurl?: string
     } ) => {
-
-    const user: UserSummary = { 
+    const user: UserDetail = { 
+        id: getSafeValue(username),
         username: getSafeValue(username), 
         firstname: getSafeValue(firstname), 
-        lastname: getSafeValue(lastname) 
+        lastname: getSafeValue(lastname),
+        email: getSafeValue(email),
+        profilepicurl: getSafeValue(profilepicurl)
     };
     const response : AuthcResponse = {
         token: getSafeValue(token),
@@ -122,6 +126,8 @@ export const authenticateGoogleToken = async (req: Request): Promise<AuthcRespon
                 username: userid,
                 firstname: payload['given_name'],
                 lastname: payload['family_name'],
+                profilepicurl: payload['picture'],
+                email: payload['email']
             });
             return resp;
         } else {

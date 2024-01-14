@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/lojones/lojoweb-server-node#readme",
   "dependencies": {
+    "@azure/cosmos": "^4.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -35,6 +36,7 @@
     "@types/express": "^4.17.20",
     "@types/node": "^20.8.9",
     "@types/uuid": "^9.0.7",
+    "prettier": "3.2.1",
     "typescript": "^5.2.2"
   }
 }
