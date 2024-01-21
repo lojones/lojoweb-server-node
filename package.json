@@ -22,11 +22,13 @@
   "homepage": "https://github.com/lojones/lojoweb-server-node#readme",
   "dependencies": {
     "@azure/cosmos": "^4.0.0",
+    "@types/jsonwebtoken": "^9.0.5",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "google-auth-library": "^9.4.1",
     "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
     "openai": "^4.0.0",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"

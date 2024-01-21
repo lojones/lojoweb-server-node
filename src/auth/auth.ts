@@ -3,8 +3,10 @@ import { AuthcResponse } from '../models/UserAuthenticationResponse';
 import { UserDetail, UserSummary } from '../models/User';
 import { getSafeValue } from '../util/util';
 import { OAuth2Client } from 'google-auth-library';
+import { verifyMicrosoftAccessToken, verifyMicrosoftIdToken, jwtDecodeMicrosoftToken, getPayloadFromAccessToken } from './authMicrosoft';
+import jwt from 'jsonwebtoken';
 
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const logger = require('../util/logger'); 
 const envvars = require('../envvars');
 const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
@@ -24,9 +26,16 @@ export const authenticateToken = (req: Request, res: Response, next: any) => {
 export const getUsernameFromToken = (req: Request) : string => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    const decodedToken = jwt.decode(token);
-    const username = decodedToken.sub;
-    return username;
+    if (token) {
+        const decodedToken = jwt.decode(token);
+        if (decodedToken && decodedToken.sub) {
+            if (typeof decodedToken.sub === 'string') {
+                const username:string = decodedToken.sub;
+                return username;
+            }
+        }
+    }
+    return "";
 }
 
 export const getJwtPayload = (subject: string, expiryMinutes: number): Record<string, unknown> => {
@@ -103,6 +112,43 @@ export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
             username: username});
         return resp;
     }
+}
+
+export const authenticateMicrosoftToken = async (req: Request): Promise<AuthcResponse> => {
+    const { idToken, accessToken } = req.body;
+
+    const verifiedIdToken : boolean = await verifyMicrosoftIdToken(idToken);
+
+    if (!verifiedIdToken) {
+        logger.debug("authentication token verification failed");
+        throw new Error("authentication token verification failed");
+    }
+
+    const verifiedAccessToken = await verifyMicrosoftAccessToken(accessToken);
+
+    if (!verifiedAccessToken) {
+        logger.debug("access token verification failed");
+        throw new Error("access token verification failed");
+    }
+
+    const payload = getPayloadFromAccessToken(accessToken);
+    const userid = payload['email'];
+    if (!userid) {  
+        throw new Error("userid not found in payload");
+    }
+    const signedJwtToken = getSignedJwtToken(userid);
+    const resp: AuthcResponse = getAuthcResponseObject({
+        status: 'success',
+        message: 'success',
+        token: signedJwtToken,
+        username: userid,
+        firstname: payload['given_name'],
+        lastname: payload['family_name'],
+        profilepicurl: 'test', //payload['picture'],
+        email: payload['email']
+    });
+    return resp;
+    
 }
 
 export const authenticateGoogleToken = async (req: Request): Promise<AuthcResponse> => {
