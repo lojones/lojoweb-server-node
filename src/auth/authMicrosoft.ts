@@ -1,16 +1,14 @@
-// import jwt from 'jsonwebtoken';
-// import jwksClient from 'jwks-rsa';
 import jwt, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
 import jwksClient, { JwksClient, SigningKey } from 'jwks-rsa';
 const logger = require('../util/logger'); 
 const envvars = require('../envvars');
 const microsoft_auth_tenant = envvars.getMandatoryEnvVar('MICROSOFT_OAUTH_TENANT_ID');
-const microsoft_auth_clientid = envvars.getMandatoryEnvVar('MICROSOFT_OAUTH_CLIENT_ID');
 
 
 const jwksclient = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${microsoft_auth_tenant}/discovery/v2.0/keys`,
 });
+
 
 export const jwtDecodeMicrosoftToken = (token: string): jwt.Jwt | null => {
   return jwt.decode(token, { complete: true });
@@ -18,7 +16,7 @@ export const jwtDecodeMicrosoftToken = (token: string): jwt.Jwt | null => {
 
 const verifyMicrosoftToken = async (token: string, key: string): Promise<boolean> => {
   try {
-    const verifiedToken = jwt.verify(token, key);
+    const verifiedToken = jwt.verify(token, key, { algorithms: ['RS256'] });
     if (!verifiedToken) {
         throw new Error('Token verification failed'); 
     } else {
@@ -38,13 +36,17 @@ export const verifyMicrosoftIdToken = async (token: string): Promise<boolean> =>
         throw new Error('Token verification failed: could not jwt decode idtoken'); 
     } 
 
-    const key = idToken.header.kid;
+    const header = idToken.header;
     
-    if (!key) {
-        throw new Error('Token verification failed: could not get key from idtoken header'); 
+    if (!header) {
+        throw new Error('Token verification failed: could not get idtoken header'); 
     }
 
-    return verifyMicrosoftToken(token, key);
+    const publicKey = await getPublicSigningKeyFromHeader(header, jwksclient);
+
+    console.log("idToken publicKey: \n", publicKey);
+
+    return verifyMicrosoftToken(token, publicKey);
     
   } catch (error) {
     
@@ -54,22 +56,10 @@ export const verifyMicrosoftIdToken = async (token: string): Promise<boolean> =>
 
 }
 
-export const verifyMicrosoftAccessToken = async (accessToken: string): Promise<boolean> => {
+
+async function getPublicSigningKeyFromHeader(header: JwtHeader, client:JwksClient ): Promise<string> {
   try {
-    const header:JwtHeader= getHeaderFromAccessToken(accessToken);
-    const key = await getPublicSigningKeyFromHeader(header);
-    return verifyMicrosoftToken(accessToken, key);
-  } catch (error) {
-    logger.error("access token verification error:", error);
-    return false;
-  }
-}
-
-
-
-async function getPublicSigningKeyFromHeader(header: JwtHeader): Promise<string> {
-  try {
-    const key = await jwksclient.getSigningKey(header.kid as string);
+    const key = await client.getSigningKey(header.kid as string);
     const signingKey = key.getPublicKey();
     return signingKey;
   } catch (error) {
@@ -87,11 +77,6 @@ function base64DecodeToJson(accessToken: string, delimiter:string, part:number) 
     console.error('Error extracting json from base64encoded string:', error);
     throw new Error('Error extracting json from base64encoded string ');
   }
-}
-
-function getHeaderFromAccessToken(accessToken: string): JwtHeader {
-  return base64DecodeToJson(accessToken, '.', 0);
-  
 }
 
 export function getPayloadFromAccessToken(accessToken: string): any {

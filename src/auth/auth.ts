@@ -3,7 +3,8 @@ import { AuthcResponse } from '../models/UserAuthenticationResponse';
 import { UserDetail, UserSummary } from '../models/User';
 import { getSafeValue } from '../util/util';
 import { OAuth2Client } from 'google-auth-library';
-import { verifyMicrosoftAccessToken, verifyMicrosoftIdToken, jwtDecodeMicrosoftToken, getPayloadFromAccessToken } from './authMicrosoft';
+import { verifyMicrosoftIdToken, jwtDecodeMicrosoftToken } from './authMicrosoft';
+import { getMicrosoftUserDetails } from '../services/userdetailservice';
 import jwt from 'jsonwebtoken';
 
 // const jwt = require('jsonwebtoken');
@@ -114,6 +115,13 @@ export const authenticateUsernamePassword  = (req: Request) : AuthcResponse => {
     }
 }
 
+const getFirstLastName = (name: string) : {firstname: string, lastname: string} => {
+    const names = name.split(' ');
+    const firstname = names[0];
+    const lastname = names[names.length - 1];
+    return {firstname: firstname, lastname: lastname};
+}
+
 export const authenticateMicrosoftToken = async (req: Request): Promise<AuthcResponse> => {
     const { idToken, accessToken } = req.body;
 
@@ -124,30 +132,40 @@ export const authenticateMicrosoftToken = async (req: Request): Promise<AuthcRes
         throw new Error("authentication token verification failed");
     }
 
-    const verifiedAccessToken = await verifyMicrosoftAccessToken(accessToken);
-
-    if (!verifiedAccessToken) {
-        logger.debug("access token verification failed");
-        throw new Error("access token verification failed");
+    
+    
+    try {
+        const decodedIdToken = jwtDecodeMicrosoftToken(idToken);
+        if (!decodedIdToken || !decodedIdToken.payload) {
+            throw new Error("error decoding idtoken");
+        }
+        const payload = decodedIdToken.payload as jwt.JwtPayload;
+        const userid = payload['preferred_username'];
+        const {firstname,lastname}=getFirstLastName(payload['name']);
+        
+        if (!userid) {  
+            throw new Error("userid not found in payload");
+        }
+        //get a random number between 1 and 7 and substitute that number in this string: genericprofilepic<randomnumber>.png
+        const randomnumber = Math.floor(Math.random() * 7) + 1;
+        const profilepicurl = 'genericprofilepic' + randomnumber + '.png';
+        const signedJwtToken = getSignedJwtToken(userid);
+        const resp: AuthcResponse = getAuthcResponseObject({
+            status: 'success',
+            message: 'success',
+            token: signedJwtToken,
+            username: userid,
+            firstname: firstname,
+            lastname: lastname,
+            profilepicurl: profilepicurl,
+            email: userid
+        });
+        return resp;
+        
+    } catch (error) {
+        throw new Error("error retrieving user details");
     }
-
-    const payload = getPayloadFromAccessToken(accessToken);
-    const userid = payload['email'];
-    if (!userid) {  
-        throw new Error("userid not found in payload");
-    }
-    const signedJwtToken = getSignedJwtToken(userid);
-    const resp: AuthcResponse = getAuthcResponseObject({
-        status: 'success',
-        message: 'success',
-        token: signedJwtToken,
-        username: userid,
-        firstname: payload['given_name'],
-        lastname: payload['family_name'],
-        profilepicurl: 'test', //payload['picture'],
-        email: payload['email']
-    });
-    return resp;
+    
     
 }
 

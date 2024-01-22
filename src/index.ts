@@ -8,12 +8,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 import { LojoChat } from './models/LojoChat';
 import { authenticateToken, authenticateUsernamePassword, authenticateGoogleToken, authenticateMicrosoftToken } from './auth/auth';
-// import { authenticateMicrosoftToken } from './auth/authMicrosoft';
 import { AuthcResponse } from './models/UserAuthenticationResponse';
 import { UserDetail } from './models/User';
 import { getUserDetails, saveUserDetails } from './user/user';
 import { submitRemark, getRemarkResponseStream } from './services/openaiservice';
-
 
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], 
@@ -36,6 +34,7 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
         res.status(401).send({ message: 'Invalid login' });
     }
 });
+
 
 app.post('/api/auth/google/token/signin', async (req: Request, res: Response) => {
     logger.debug("entered /api/auth/google/token/signin route");
