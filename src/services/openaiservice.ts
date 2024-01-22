@@ -54,7 +54,11 @@ const generateLlmPrompt = (chat : LojoChat) : ChatCompletionMessage[] => {
     const prompts : ChatCompletionMessage[] = [];
 
     const additionalSystemPrompt = `${process.env['SYSTEM_PROMPT']}`;
-    const systemPromptText = `${PROMPT_CONFIG.system_prompt}  ${additionalSystemPrompt}`;
+
+    // if there are any strings of '\n' in the additionalSystemPrompt, replace them with actual newlines
+    const additionalSystemPromptWithNewlines = additionalSystemPrompt.replace(/\\n/g, '\n');
+
+    const systemPromptText = `${PROMPT_CONFIG.system_prompt}  ${additionalSystemPromptWithNewlines}`;
 
     const systemPrompt : ChatCompletionMessage = {
         role: 'system',
