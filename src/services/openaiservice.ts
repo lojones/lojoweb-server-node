@@ -8,9 +8,6 @@ import { LojoChat, LojoChatRemarkUniqueId } from '../models/LojoChat';
 const logger = require('../util/logger'); 
 import { Request, Response } from 'express';
 
-// import { Chat } from 'openai/resources/chat/chat'
-// import ChatCompletionMessageParam = 
-
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], 
 });
@@ -56,9 +53,12 @@ const generateLlmPrompt = (chat : LojoChat) : ChatCompletionMessage[] => {
     
     const prompts : ChatCompletionMessage[] = [];
 
+    const additionalSystemPrompt = `${process.env['SYSTEM_PROMPT']}`;
+    const systemPromptText = `${PROMPT_CONFIG.system_prompt}  ${additionalSystemPrompt}`;
+
     const systemPrompt : ChatCompletionMessage = {
         role: 'system',
-        content: PROMPT_CONFIG.system_prompt
+        content: systemPromptText
     }
 
     prompts.push(systemPrompt);
