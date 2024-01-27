@@ -80,7 +80,7 @@ const getAuthcResponseObject = (
 }
 
 export const getSignedJwtToken = (username: string) : string => {
-    const payload = getJwtPayload(username, 60);
+    const payload = getJwtPayload(username, 60 * 24 * 14);
     const token = jwt.sign(payload, jwt_secret);
     return token;
 }
