@@ -34,7 +34,8 @@ const generateRemarkUniqueId = (chat:LojoChat) : LojoChatRemarkUniqueId => {
     const userId = chat.userId;
     const remarkUid = `${userId}-${chatId}-${remarkUuid}`;
     const remarkUniqueId : LojoChatRemarkUniqueId = {
-        remarkUid: remarkUid
+        remarkUid: remarkUid,
+        responseStatusCode: 200
     }
     return remarkUniqueId;
 }

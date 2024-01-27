@@ -27,12 +27,13 @@ app.get('/', (req: Request, res: Response) => {
 app.post('/api/auth/signin', (req: Request, res: Response) => {
     logger.debug("entered /api/auth/signin route");
     const authResponse:AuthcResponse = authenticateUsernamePassword(req);
-    saveUserDetails(authResponse.user);
-    if (authResponse.status === 'success') {
-        res.send(authResponse);
-    } else {
-        res.status(401).send({ message: 'Invalid login' });
-    }
+    if (authResponse.user){
+        saveUserDetails(authResponse.user);
+        if (authResponse.status === 'success') {
+            res.send(authResponse);
+        } 
+    } 
+    res.status(401).send({ message: 'Invalid login' });
 });
 
 
@@ -40,31 +41,32 @@ app.post('/api/auth/google/token/signin', async (req: Request, res: Response) =>
     logger.debug("entered /api/auth/google/token/signin route");
     try {
         const authResponse: AuthcResponse = await authenticateGoogleToken(req);
-        saveUserDetails(authResponse.user);
-        if (authResponse.status === 'success') {
+        if (authResponse && authResponse.user){
+            const saveresult = await saveUserDetails(authResponse.user);
             res.send(authResponse);
+            
         } else {
-            res.status(401).send({ message: 'Invalid login' });
+            res.status(500).send({ message: 'Internal server error' });
         }
     } catch (error) {
         res.status(500).send({ message: 'Internal server error' });
     }
 });
 
-app.post('/api/auth/microsoft/token/signin', async (req: Request, res: Response) => {
-    logger.debug("entered /api/auth/microsoft/token/signin route");
-    try {
-        const authResponse: AuthcResponse = await authenticateMicrosoftToken(req);
-        saveUserDetails(authResponse.user);
-        if (authResponse.status === 'success') {
-            res.send(authResponse);
-        } else {
-            res.status(401).send({ message: 'Invalid login' });
-        }
-    } catch (error) {
-        res.status(500).send({ message: 'Internal server error' });
-    }
-});
+// app.post('/api/auth/microsoft/token/signin', async (req: Request, res: Response) => {
+//     logger.debug("entered /api/auth/microsoft/token/signin route");
+//     try {
+//         const authResponse: AuthcResponse = await authenticateMicrosoftToken(req);
+//         saveUserDetails(authResponse.user);
+//         if (authResponse.status === 'success') {
+//             res.send(authResponse);
+//         } else {
+//             res.status(401).send({ message: 'Invalid login' });
+//         }
+//     } catch (error) {
+//         res.status(500).send({ message: 'Internal server error' });
+//     }
+// });
 
 app.post('/api/chat/remark/submit', authenticateToken, async (req: Request, res: Response) => {
     logger.debug("entered /api/chat/send route");

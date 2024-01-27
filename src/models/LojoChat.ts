@@ -22,4 +22,5 @@ export interface LojoChatMetadata {
 
 export interface LojoChatRemarkUniqueId {
     remarkUid: string;
+    responseStatusCode: number;
 }

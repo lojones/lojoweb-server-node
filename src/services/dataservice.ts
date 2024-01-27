@@ -1,32 +1,55 @@
+import { MongoClient,Db,Collection } from 'mongodb';
 import { UserDetail } from "../models/User";
+import { get } from 'http';
+import e from 'express';
 
-const CosmosClient = require('@azure/cosmos').CosmosClient
 require('dotenv').config();
 const envvars = require('../envvars');
-const endpoint = envvars.getMandatoryEnvVar('COSMOSDB_ENDPOINT');
-const key = envvars.getMandatoryEnvVar('COSMOSDB_KEY');
-const databasename = envvars.getMandatoryEnvVar('COSMOSDB_DATABASE_NAME');
-const containername = envvars.getMandatoryEnvVar('COSMOSDB_CONTAINER_NAME');
+const uri = envvars.getMandatoryEnvVar('MONGODB_URI');
+const databasename = envvars.getMandatoryEnvVar('MONGODB_DATABASE_NAME');
+const username = envvars.getMandatoryEnvVar('MONGODB_USERNAME');
+const password = envvars.getMandatoryEnvVar('MONGODB_PASSWORD');
+const UserProfilesCollection = envvars.getMandatoryEnvVar('MONGODB_COLLECTION_NAME_USERS');
+
 const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
+const credentialeduri = uri.replace('<username>', username).replace('<password>', password);
+const client = new MongoClient(credentialeduri);
 
-const options = {
-    endpoint: endpoint,
-    key: key,
-    userAgentSuffix: 'CosmosDBJavascriptQuickstart'
-  };
+const getDb = async ():Promise<Db>=> {
+    await client.connect();
+    const db:Db = client.db(databasename);
+    return db;
+}
 
-const client = new CosmosClient(options);
+// store user details into databasename.collectionname in mongodb
+export const storeUserDetails = async (userDetail:UserDetail):Promise<boolean> => {
+    try { 
+        const coll = client.db(databasename).collection(UserProfilesCollection);
+        const exists = await coll.countDocuments({id:userDetail.id});
+        
+        if (exists == 0) {
+            const insertResult = await coll.insertOne(userDetail);
+            if (insertResult) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
 
-// store user details into databasename.containername in cosmosdb
-export const storeUserDetails = async (userDetail:UserDetail) => {
-    const database = client.database(databasename);
-    const container = database.container(containername);
-    const { resource: createdItem } = await container.items.upsert(userDetail);
-    return createdItem;
+        console.log("a: " + exists);
+
+    } catch (error) {
+        console.log("error storing this user detail in db: " + error);
+        return false;
+    }
+    
 }
 
 // retrieve user details from databasename.containername in cosmosdb
 export const retrieveUserDetails = async (username:string):Promise<UserDetail[]> => {
+
     const user = localAccountsJson[username];
     if (user) {
         const userDetail: UserDetail = {
@@ -37,30 +60,12 @@ export const retrieveUserDetails = async (username:string):Promise<UserDetail[]>
             email: 'none@none.com',
             profilepicurl: ''
         };
-        const userDetailArray: UserDetail[] = [userDetail];
-        return userDetailArray;
+        return [userDetail];
     } else {
-        const database = client.database(databasename);
-        const container = database.container(containername);
-        const querySpec = {
-            query: "SELECT * from root r where r.username = @username",
-            parameters: [
-                {
-                    name: "@username",
-                    value: username
-                }
-            ]
-        };
-        const { resources: results } = await container.items
-            .query(querySpec)
-            .fetchAll();
-        const userDetails:UserDetail[] = [];
-        for (var queryResult of results) {
-            let resultString = JSON.stringify(queryResult);
-            const userDetail:UserDetail = JSON.parse(resultString);
-            userDetails.push(userDetail);
-        }
-        return userDetails;
+        const result = await client.db(databasename).collection(UserProfilesCollection).findOne({id:username});
+        const userDetail: UserDetail = JSON.parse(JSON.stringify(result));
+        return [userDetail];
+
     }
     
 }
