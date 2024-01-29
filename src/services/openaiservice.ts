@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { LojoChat, LojoChatRemarkUniqueId } from '../models/LojoChat';
 const logger = require('../util/logger'); 
 import { Request, Response } from 'express';
-import { get_encoding, encoding_for_model, TiktokenModel } from "tiktoken";
 
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], 
