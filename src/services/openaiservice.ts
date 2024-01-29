@@ -7,26 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { LojoChat, LojoChatRemarkUniqueId } from '../models/LojoChat';
 const logger = require('../util/logger'); 
 import { Request, Response } from 'express';
+import { get_encoding, encoding_for_model, TiktokenModel } from "tiktoken";
 
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], 
 });
-
-export const getResponseAsStream = async (message: string) : Promise<string> => {
-    const stream = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [{ 
-                    role: 'user',
-                    content: message
-                    }],
-        stream: true,
-        });
-    for await (const chunk of stream) {
-        const data = chunk.choices[0]?.delta?.content || '';
-        return data;
-    }
-    return '';
-}
 
 const generateRemarkUniqueId = (chat:LojoChat) : LojoChatRemarkUniqueId => {
     const remarkUuid = uuidv4();

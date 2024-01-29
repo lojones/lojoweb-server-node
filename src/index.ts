@@ -13,6 +13,7 @@ import { UserDetail } from './models/User';
 import { getUserDetails, saveUserDetails } from './user/user';
 import { submitRemark, getRemarkResponseStream } from './services/openaiservice';
 import { storeUserLogin } from './services/dataservice';
+import { storeChat } from './services/dataservice';
 
 const openai = new OpenAI({
     apiKey: process.env['OPENAI_API_KEY'], 
@@ -38,6 +39,13 @@ app.post('/api/auth/signin', (req: Request, res: Response) => {
     res.status(401).send({ message: 'Invalid login' });
 });
 
+app.post('/api/chat/store', authenticateToken, async (req: Request, res: Response) => {
+    logger.debug("entered /api/chat/store route");
+    const chat : LojoChat = req.body as LojoChat;
+    const storeResult = await storeChat(chat);          
+    res.send(storeResult);                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+
+});
 
 app.post('/api/auth/google/token/signin', async (req: Request, res: Response) => {
     logger.debug("entered /api/auth/google/token/signin route");
@@ -49,7 +57,7 @@ app.post('/api/auth/google/token/signin', async (req: Request, res: Response) =>
             res.send(authResponse);
             
         } else {
-            res.status(500).send({ message: 'Internal server error' });
+            res.status(401).send({ message: 'Invalid login' });
         }
     } catch (error) {
         res.status(500).send({ message: 'Internal server error' });
@@ -61,6 +69,7 @@ app.post('/api/auth/microsoft/token/signin', async (req: Request, res: Response)
     try {
         const authResponse: AuthcResponse = await authenticateMicrosoftToken(req);
         if (authResponse && authResponse.user){
+
             storeUserLogin(authResponse.user.username);
             const saveresult = await saveUserDetails(authResponse.user);
             res.send(authResponse);
@@ -68,7 +77,6 @@ app.post('/api/auth/microsoft/token/signin', async (req: Request, res: Response)
         } else {
             res.status(401).send({ message: 'Unable to authorize' });
         }
-
     } catch (error) {
         res.status(500).send({ message: 'Internal server error' });
     }
@@ -102,7 +110,7 @@ app.get('/api/user/details', authenticateToken, (req: Request, res: Response) =>
     .catch((error) => {
         res.status(500).send({ message: 'Internal server error: '+error });
     });
-})
+});
 
 app.listen(PORT, () => {
     logger.info("server running on port ", PORT);

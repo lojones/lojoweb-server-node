@@ -1,5 +1,6 @@
 import { MongoClient,Db,Collection } from 'mongodb';
 import { UserDetail } from "../models/User";
+import { LojoChat } from "../models/LojoChat";
 import { get } from 'http';
 import e from 'express';
 import { Logger } from 'winston';
@@ -13,6 +14,7 @@ const username = envvars.getMandatoryEnvVar('MONGODB_USERNAME');
 const password = envvars.getMandatoryEnvVar('MONGODB_PASSWORD');
 const UserProfilesCollection = envvars.getMandatoryEnvVar('MONGODB_COLLECTION_NAME_USERS');
 const signinLogCollectionName = envvars.getMandatoryEnvVar('MONGODB_COLLECTION_NAME_SIGNINLOG');
+const ChatsCollectionName = envvars.getMandatoryEnvVar('MONGODB_COLLECTION_NAME_CHATS');
 
 const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
 const credentialeduri = uri.replace('<username>', username).replace('<password>', password);
@@ -23,6 +25,20 @@ const getDb = async ():Promise<Db>=> {
     const db:Db = client.db(databasename);
     return db;
 }
+
+export const storeChat = async (chat:LojoChat):Promise<boolean> => {
+    try {
+        const coll = client.db(databasename).collection(ChatsCollectionName);
+        const filter = { chatId: chat.chatId, userId: chat.userId };
+        const options = { upsert: true };
+
+        await coll.replaceOne(filter, chat, options);
+        return true;
+    } catch (error) {
+        console.error('Error storing chat:', error);
+        return false;
+    }
+};
 
 // store user details into databasename.collectionname in mongodb
 export const storeUserDetails = async (userDetail:UserDetail):Promise<boolean> => {
@@ -40,8 +56,6 @@ export const storeUserDetails = async (userDetail:UserDetail):Promise<boolean> =
         } else {
             return false;
         }
-
-        console.log("a: " + exists);
 
     } catch (error) {
         console.log("error storing this user detail in db: " + error);
