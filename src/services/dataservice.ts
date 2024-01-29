@@ -2,14 +2,17 @@ import { MongoClient,Db,Collection } from 'mongodb';
 import { UserDetail } from "../models/User";
 import { get } from 'http';
 import e from 'express';
-
+import { Logger } from 'winston';
+const moment = require('moment-timezone');
 require('dotenv').config();
 const envvars = require('../envvars');
+const logger = require('../util/logger');
 const uri = envvars.getMandatoryEnvVar('MONGODB_URI');
 const databasename = envvars.getMandatoryEnvVar('MONGODB_DATABASE_NAME');
 const username = envvars.getMandatoryEnvVar('MONGODB_USERNAME');
 const password = envvars.getMandatoryEnvVar('MONGODB_PASSWORD');
 const UserProfilesCollection = envvars.getMandatoryEnvVar('MONGODB_COLLECTION_NAME_USERS');
+const signinLogCollectionName = envvars.getMandatoryEnvVar('MONGODB_COLLECTION_NAME_SIGNINLOG');
 
 const localAccountsJson = JSON.parse(envvars.getMandatoryEnvVar('LOCAL_ACCOUNTS'));
 const credentialeduri = uri.replace('<username>', username).replace('<password>', password);
@@ -45,6 +48,17 @@ export const storeUserDetails = async (userDetail:UserDetail):Promise<boolean> =
         return false;
     }
     
+}
+
+export const storeUserLogin = async(username:string) => {
+    try {
+        const timestamp = moment().tz("America/New_York").format('YYYY-MM-DD HH:mm:ss');
+        const coll = client.db(databasename).collection(signinLogCollectionName);
+        const insertObj={username:username, timestamp:timestamp};
+        coll.insertOne(insertObj);        
+    } catch (error) {
+        logger.error("error storing user login: " + error);
+    }
 }
 
 // retrieve user details from databasename.containername in cosmosdb
