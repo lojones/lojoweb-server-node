@@ -26,10 +26,10 @@ export const getUserDetails = (request: Request): Promise<UserDetail> => {
     }
 }
 
-export const saveUserDetails = (userDetail: UserDetail):Promise<boolean> => {
-    return storeUserDetails(userDetail);
-    // if (userDetail) {
-    //     return storeUserDetails(userDetail);
-    // }
+// export const saveUserDetails = (userDetail: UserDetail):Promise<boolean> => {
+//     return storeUserDetails(userDetail);
+//     // if (userDetail) {
+//     //     return storeUserDetails(userDetail);
+//     // }
     
-}
+// }

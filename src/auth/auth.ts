@@ -6,8 +6,10 @@ import { OAuth2Client } from 'google-auth-library';
 import { verifyMicrosoftIdToken, jwtDecodeMicrosoftToken } from './authMicrosoft';
 import { getMicrosoftUserDetails } from '../services/userdetailservice';
 import jwt from 'jsonwebtoken';
+import { verifyIdToken, getLinkedInIdToken } from './authLinkedIn';
+import { storeUserLogin,storeUserDetails } from '../services/dataservice';
 
-// const jwt = require('jsonwebtoken');
+
 const logger = require('../util/logger'); 
 const envvars = require('../envvars');
 const jwt_secret = envvars.getMandatoryEnvVar('JWT_SECRET');
@@ -203,4 +205,52 @@ export const authenticateGoogleToken = async (req: Request): Promise<AuthcRespon
     
     // Add a return statement here to fix the issue
     throw new Error("Payload is empty");
+};
+
+export const authenticateLinkedInToken = async (authcode: string): Promise<AuthcResponse> => {
+    try {
+        const idToken = await getLinkedInIdToken(authcode);
+        const verifiedIdToken = await verifyIdToken(idToken ); 
+       
+        if (!verifiedIdToken) {
+            logger.debug("authentication token verification failed");
+            throw new Error("authentication token verification failed");
+        } else {
+            logger.debug("authentication token verification succeeded");
+            
+            const {firstname,lastname}=getFirstLastName(verifiedIdToken['name']);
+            const profilepicurl = verifiedIdToken['picture'];
+            const email = verifiedIdToken['email'];
+            const issuer = verifiedIdToken['iss'];
+            const userId = `${email}_${issuer}`
+            const signedJwtToken = getSignedJwtToken(userId);
+            const resp: AuthcResponse = getAuthcResponseObject({
+                status: 'success',
+                message: 'success',
+                token: signedJwtToken,
+                username: userId,
+                firstname: firstname,
+                lastname: lastname,
+                profilepicurl: profilepicurl,
+                email: email
+            });
+            
+            return resp;
+        }
+    } catch (error) {
+        logger.debug("authentication token verification failed with error: " + error);
+            throw new Error("authentication token verification failed with error: " + error);
+    }
+}
+    
+export const handleSuccessfulTokenAuthentication = (authResponse: AuthcResponse) => {
+    try {
+        if (authResponse && authResponse.user){
+            storeUserLogin(authResponse.user.username);
+            storeUserDetails(authResponse.user);
+        }
+    } catch (error) {
+        logger.error("error storing user login and details: " + error);
+    }
+
 };
