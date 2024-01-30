@@ -222,7 +222,7 @@ export const authenticateLinkedInToken = async (authcode: string): Promise<Authc
             const profilepicurl = verifiedIdToken['picture'];
             const email = verifiedIdToken['email'];
             const issuer = verifiedIdToken['iss'];
-            const userId = `${email}_${issuer}`
+            const userId = `${email}_linkedin`
             const signedJwtToken = getSignedJwtToken(userId);
             const resp: AuthcResponse = getAuthcResponseObject({
                 status: 'success',
