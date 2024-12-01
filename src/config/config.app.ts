@@ -4,5 +4,5 @@ export const PROMPT_CONFIG = {
 }
 
 export const OPENAI_CONFIG = {
-    "model": "gpt-4-0125-preview"
+    "model": "gpt-4o"
 }
